@@ -82,9 +82,5 @@ function hellholt() {
   fi;
 }
 
-if [[ "${BASH_SOURCE[0]}" != "$0" ]]; then
-  export -f hellholt;
-else
-  hellholt "${@}";
-  exit $?;
-fi;
+hellholt "${@}";
+exit $?;
