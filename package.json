@@ -1,0 +1,8 @@
+{
+  "name": "hellholt",
+  "version": "0.0.1",
+  "description": "Bash scripts for dealing with Hellholt.",
+  "scripts": [ "hellholt.sh" ],
+  "global": "true",
+  "install": "make install"
+}
