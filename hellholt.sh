@@ -74,27 +74,30 @@ function hellholt:k8s_cluster() {
 
 # Show usage information.
 function hellholt:usage() {
+  local subcommand_width='18';
+  local subcommand_column="%${subcommand_width}s    %s\n";
   echo 'Usage: hellholt <subcommand> [arguments...]';
   echo '';
   echo 'Subcommands: ';
-  printf '%14s    %s\n' 'usage' 'Show usage information.';
-  printf '%14s    %s\n' 'ansible_task' 'Run a specified Ansible task.';
-  printf '%14s    %s\n' 'edit_vault' 'Edit the vault.';
+  printf "${subcommand_column}" 'usage' 'Show usage information.';
+  printf "${subcommand_column}" 'ansible_task' 'Run a specified Ansible task.';
+  printf "${subcommand_column}" 'edit_vault' 'Edit the vault.';
   echo '';
   echo 'LXC container host subcommands:';
-  printf '%14s    %s\n' 'create_host' 'Create a host as an LXC container.';
-  printf '%14s    %s\n' 'destroy_host' 'Destroy an LXC container.';
-  printf '%14s    %s\n' 'stop_host' 'Stop an LXC container.';
-  printf '%14s    %s\n' 'start_host' 'Start an LXC container.';
-  printf '%14s    %s\n' 'restart_host' 'Restart the LXC container.';
-  printf '%14s    %s\n' 'setup_host' 'Setup the specified host.';
+  printf "${subcommand_column}" 'create_host' 'Create a host as an LXC container.';
+  printf "${subcommand_column}" 'destroy_host' 'Destroy an host.';
+  printf "${subcommand_column}" 'stop_host' 'Stop a host.';
+  printf "${subcommand_column}" 'start_host' 'Start a host.';
+  printf "${subcommand_column}" 'restart_host' 'Restart the host.';
+  printf "${subcommand_column}" 'recreate_host' 'Destroy and recreate the host.';
+  printf "${subcommand_column}" 'setup_host' 'Setup the host.';
   echo '';
   echo 'Kubernetes cluster subcommands:';
-  printf '%14s    %s\n' 'create_cluster' 'Create a Kubernetes cluster.';
-  printf '%14s    %s\n' 'recreate_cluster' 'Destroy and rereate a Kubernetes cluster.';
-  printf '%14s    %s\n' 'destroy_cluster' 'Destroy a Kubernetes cluster.';
-  printf '%14s    %s\n' 'reset_cluster' 'Reset a Kubernetes cluster.';
-  printf '%14s    %s\n' 'setup_cluster' 'Setup a Kubernetes cluster.';
+  printf "${subcommand_column}" 'create_cluster' 'Create a Kubernetes cluster.';
+  printf "${subcommand_column}" 'recreate_cluster' 'Destroy and rereate a Kubernetes cluster.';
+  printf "${subcommand_column}" 'destroy_cluster' 'Destroy a Kubernetes cluster.';
+  printf "${subcommand_column}" 'reset_cluster' 'Reset a Kubernetes cluster.';
+  printf "${subcommand_column}" 'setup_cluster' 'Setup a Kubernetes cluster.';
   echo '';
 }
 
@@ -105,6 +108,7 @@ lxc_container_subcommands=(
   'stop_host'
   'start_host'
   'restart_host'
+  'recreate_host'
 )
 
 # Valid subcommands of hellholt:k8s_cluster.
