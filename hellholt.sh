@@ -2,6 +2,21 @@
 
 ansible_path="${HELLHOLT_ANSIBLE_PATH:-${HOME}/Projects/ansible}";
 
+# Run a specified Ansible role.
+function hellholt:ansible_role() {
+  : "${2?"Usage: ${FUNCNAME[0]} <HOSTNAME|GROUP> <ROLE> <TASKFILE>"}";
+  local host_expression="${1}";
+  local role_name="${2}";
+  pushd "${ansible_path}" > /dev/null;
+  ansible-playbook ${@:3} /dev/stdin <<END
+---
+- hosts: $host_expression
+  roles:
+    - '$role_name'
+END
+  popd > /dev/null;
+}
+
 # Run a specified Ansible task.
 function hellholt:ansible_task() {
   : "${3?"Usage: ${FUNCNAME[0]} <HOSTNAME|GROUP> <ROLE> <TASKFILE>"}";
@@ -9,20 +24,30 @@ function hellholt:ansible_task() {
   local role_name="${2}";
   local task_file="${3}";
   pushd "${ansible_path}" > /dev/null;
-  ansible-playbook /dev/stdin <<END
+  ansible-playbook ${@:4} /dev/stdin <<END
 ---
 - hosts: $host_expression
   tasks:
 
   - name: 'Debug.'
     ansible.builtin.debug:
-      msg: "$role_name $task_file $args"
+      msg: '$role_name $task_file $args'
 
   - name: 'Execute $role_name:$task_file'
     ansible.builtin.include_role:
-      name: $role_name
+      name: '$role_name'
       tasks_from: '$task_file'
 END
+  popd > /dev/null;
+}
+
+# Setup the host.
+function hellholt:setup() {
+  : "${1?"Usage: ${FUNCNAME[0]} <HOSTNAME|GROUP>"}";
+  local host_expression="${1}";
+  local args="${@:2}";
+  pushd "${ansible_path}" > /dev/null;
+  hellholt:ansible_role "${host_expression}" 'hellholt.setup_host' -e 'ansible_user=root' "${args}";
   popd > /dev/null;
 }
 
@@ -55,6 +80,7 @@ function hellholt:usage() {
   printf '%14s    %s\n' 'stop' 'Stop an LXC container.';
   printf '%14s    %s\n' 'start' 'Start an LXC container.';
   printf '%14s    %s\n' 'restart' 'Restart the LXC container.';
+  printf '%14s    %s\n' 'setup' 'Setup the specified host.';
   printf '%14s    %s\n' 'edit_vault' 'Edit the vault.';
   echo '';
 }
