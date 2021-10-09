@@ -91,6 +91,7 @@ function hellholt:usage() {
   echo '';
   echo 'Kubernetes cluster subcommands:';
   printf '%14s    %s\n' 'create_cluster' 'Create a Kubernetes cluster.';
+  printf '%14s    %s\n' 'recreate_cluster' 'Destroy and rereate a Kubernetes cluster.';
   printf '%14s    %s\n' 'destroy_cluster' 'Destroy a Kubernetes cluster.';
   printf '%14s    %s\n' 'reset_cluster' 'Reset a Kubernetes cluster.';
   printf '%14s    %s\n' 'setup_cluster' 'Setup a Kubernetes cluster.';
@@ -109,6 +110,7 @@ lxc_container_subcommands=(
 # Valid subcommands of hellholt:k8s_cluster.
 k8s_cluster_subcommands=(
   'create_cluster'
+  'recreate_cluster'
   'destroy_cluster'
   'reset_cluster'
   'setup_cluster'
