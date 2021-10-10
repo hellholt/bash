@@ -124,6 +124,7 @@ k8s_cluster_subcommands=(
 function hellholt() {
   : "${1?"Usage: ${FUNCNAME[0]} <SUBCOMMAND> [ARGUMENTS] ..."}";
   local subcommand=$1;
+  export OBJC_DISABLE_INITIALIZE_FORK_SAFETY='YES';
   shift;
   if type "hellholt:${subcommand}" > /dev/null 2>&1; then
     "hellholt:${subcommand}" "${@}";
