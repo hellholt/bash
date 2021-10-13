@@ -2,6 +2,15 @@
 
 ansible_path="${HELLHOLT_ANSIBLE_PATH:-${HOME}/Projects/ansible}";
 
+# Run a specified Ansible playbook.
+function hellholt:ansible_playbook() {
+  : "${2?"Usage: ${FUNCNAME[0]} <PLAYBOOK>"}";
+  local playbook_expression="${1}";
+  pushd "${ansible_path}" > /dev/null;
+  ansible-playbook "${playbook_expression}";
+  popd > /dev/null;
+}
+
 # Run a specified Ansible role.
 function hellholt:ansible_role() {
   : "${2?"Usage: ${FUNCNAME[0]} <HOSTNAME|GROUP> <ROLE> <TASKFILE>"}";
@@ -34,6 +43,16 @@ function hellholt:ansible_task() {
       name: '$role_name'
       tasks_from: '$task_file'
 END
+  popd > /dev/null;
+}
+
+# Reissue SSH certificates.
+function hellholt:reissue_ssh_certs() {
+  : "${1?"Usage: ${FUNCNAME[0]} <HOSTNAME|GROUP>"}";
+  local host_expression="${1}";
+  local args="${@:2}";
+  pushd "${ansible_path}" > /dev/null;
+  hellholt:ansible_task "${host_expression}" 'hellholt.setup_host' 'setup_groups/ssh_certs.yaml' -e 'ansible_user=root' "${args}";
   popd > /dev/null;
 }
 
@@ -82,6 +101,8 @@ function hellholt:usage() {
   printf "${subcommand_column}" 'usage' 'Show usage information.';
   printf "${subcommand_column}" 'ansible_task' 'Run a specified Ansible task.';
   printf "${subcommand_column}" 'edit_vault' 'Edit the vault.';
+  printf "${subcommand_column}" 'autocomplete' 'Output autocomplete information.';
+  printf "${subcommand_column}" 'reissue_ssh_certs' 'Reissue SSH certificates.';
   echo '';
   echo 'LXC container host subcommands:';
   printf "${subcommand_column}" 'create_host' 'Create a host as an LXC container.';
@@ -93,13 +114,22 @@ function hellholt:usage() {
   printf "${subcommand_column}" 'setup_host' 'Setup the host.';
   echo '';
   echo 'Kubernetes cluster subcommands:';
-  printf "${subcommand_column}" 'create_cluster' 'Create a Kubernetes cluster.';
-  printf "${subcommand_column}" 'recreate_cluster' 'Destroy and rereate a Kubernetes cluster.';
-  printf "${subcommand_column}" 'destroy_cluster' 'Destroy a Kubernetes cluster.';
-  printf "${subcommand_column}" 'reset_cluster' 'Reset a Kubernetes cluster.';
-  printf "${subcommand_column}" 'setup_cluster' 'Setup a Kubernetes cluster.';
+  printf "${subcommand_column}" 'create_cluster' 'Create a cluster (but do not deploy tasks).';
+  printf "${subcommand_column}" 'recreate_cluster' 'Destroy and rereate a cluster (but do not deploy tasks).';
+  printf "${subcommand_column}" 'destroy_cluster' 'Destroy a cluster.';
+  printf "${subcommand_column}" 'reset_cluster' 'Reset a cluster and deploy tasks.';
+  printf "${subcommand_column}" 'setup_cluster' 'Setup a cluster and deploy tasks.';
+  printf "${subcommand_column}" 'redeploy_cluster' 'Deploy/redeploy tasks on the clustter.';
   echo '';
 }
+
+general_subcommands=(
+  'usage'
+  'ansible_task'
+  'edit_vault'
+  'autocomplete'
+  'reissue_ssh_certs'
+)
 
 # Valid subcommands of hellholt:lxc_container.
 lxc_container_subcommands=(
@@ -118,7 +148,22 @@ k8s_cluster_subcommands=(
   'destroy_cluster'
   'reset_cluster'
   'setup_cluster'
+  'redeploy_cluster'
 )
+
+# Print autocomplete script.
+function hellholt:autocomplete() {
+  local old_ifs="${IFS}";
+  IFS=\ ;
+  local all_subcommands=(
+    "$(echo "${general_subcommands[*]}")"
+    "$(echo "${lxc_container_subcommands[*]}")"
+    "$(echo "${k8s_cluster_subcommands[*]}")"
+  )
+  local subcommands_string="$(echo "${all_subcommands[*]}")";
+  echo complete -W "'"${subcommands_string}"'" hellholt;
+  IFS="${old_ifs}";
+}
 
 # Primary function.
 function hellholt() {
