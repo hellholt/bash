@@ -170,6 +170,7 @@ function hellholt() {
   : "${1?"Usage: ${FUNCNAME[0]} <SUBCOMMAND> [ARGUMENTS] ..."}";
   local subcommand=$1;
   export OBJC_DISABLE_INITIALIZE_FORK_SAFETY='YES';
+  export K8S_AUTH_KUBECONFIG='~/.kube/config';
   shift;
   if type "hellholt:${subcommand}" > /dev/null 2>&1; then
     "hellholt:${subcommand}" "${@}";
