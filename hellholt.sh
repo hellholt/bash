@@ -73,6 +73,15 @@ function hellholt:edit_vault() {
   popd > /dev/null;
 }
 
+# Apply a setup group to a host.
+function hellholt:apply_setup_group() {
+  : "${2?"Usage: ${FUNCNAME[0]} <HOSTNAME|GROUP> <SETUP_GROUP>"}";
+  local host_expression="${1}";
+  local setup_group="${2}";
+  local args="${@:3}";
+  ANSIBLE_GATHERING='explicit' hellholt:ansible_task "${host_expression}" 'hellholt.setup_host' "setup_groups/${setup_group}.yaml" "${args}" --become;
+}
+
 # Perform an operation on an LXC container.
 function hellholt:lxc_container() {
   : "${2?"Usage: ${FUNCNAME[0]} <COMMAND> <HOSTNAME|GROUP>"}";
@@ -139,6 +148,7 @@ lxc_container_subcommands=(
   'start_host'
   'restart_host'
   'recreate_host'
+  'apply_setup_group'
 )
 
 # Valid subcommands of hellholt:k8s_cluster.
