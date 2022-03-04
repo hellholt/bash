@@ -66,20 +66,20 @@ function hellholt:setup_host() {
   popd > /dev/null;
 }
 
-# Edit the vault.
-function hellholt:edit_vault() {
-  pushd "${ansible_path}" > /dev/null;
-  ansible-vault edit ./inventory/group_vars/all/vault;
-  popd > /dev/null;
-}
-
 # Apply a setup group to a host.
 function hellholt:apply_setup_group() {
   : "${2?"Usage: ${FUNCNAME[0]} <HOSTNAME|GROUP> <SETUP_GROUP>"}";
   local host_expression="${1}";
   local setup_group="${2}";
   local args="${@:3}";
-  ANSIBLE_GATHERING='explicit' hellholt:ansible_task "${host_expression}" 'hellholt.setup_host' "setup_groups/${setup_group}.yaml" "${args}" --become;
+  ANSIBLE_GATHERING='implicit' hellholt:ansible_task "${host_expression}" 'hellholt.setup_host' "setup_groups/${setup_group}.yaml" "${args}" --become;
+}
+
+# Edit the vault.
+function hellholt:edit_vault() {
+  pushd "${ansible_path}" > /dev/null;
+  ansible-vault edit ./inventory/group_vars/all/vault;
+  popd > /dev/null;
 }
 
 # Perform an operation on an LXC container.
@@ -98,6 +98,11 @@ function hellholt:k8s_cluster() {
   local host_expression="${2}";
   local args="${@:3}";
   ANSIBLE_GATHERING='explicit' hellholt:ansible_task "${host_expression}" 'hellholt.kubernetes' "${subcommand}.yaml" "${args}";
+}
+
+# Refresh Homer.
+function hellholt:refresh_homer() {
+  ANSIBLE_GATHERING='explicit' hellholt:ansible_task 'homer' 'hellholt.setup_host' 'setup_groups/homer.yaml' --become;
 }
 
 # Show usage information.
@@ -138,6 +143,7 @@ general_subcommands=(
   'edit_vault'
   'autocomplete'
   'reissue_ssh_certs'
+  'refresh_homer'
 )
 
 # Valid subcommands of hellholt:lxc_container.
@@ -148,6 +154,7 @@ lxc_container_subcommands=(
   'start_host'
   'restart_host'
   'recreate_host'
+  'setup_host'
   'apply_setup_group'
 )
 
