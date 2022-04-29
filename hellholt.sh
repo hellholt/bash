@@ -105,6 +105,11 @@ function hellholt:refresh_homer() {
   ANSIBLE_GATHERING='explicit' hellholt:ansible_task 'homer' 'hellholt.setup_host' 'setup_groups/homer.yaml' --become;
 }
 
+# Refresh Homer.
+function hellholt:setup_transmission() {
+  ANSIBLE_GATHERING='implicit' hellholt:ansible_task 'transmission' 'hellholt.transmission' 'setup.yaml' --become;
+}
+
 # Show usage information.
 function hellholt:usage() {
   local subcommand_width='18';
@@ -117,6 +122,8 @@ function hellholt:usage() {
   printf "${subcommand_column}" 'edit_vault' 'Edit the vault.';
   printf "${subcommand_column}" 'autocomplete' 'Output autocomplete information.';
   printf "${subcommand_column}" 'reissue_ssh_certs' 'Reissue SSH certificates.';
+  printf "${subcommand_column}" 'refresh_homer' 'Refresh Homer.';
+  printf "${subcommand_column}" 'setup_transmission' 'Setup the Transmission cluster.';
   echo '';
   echo 'LXC container host subcommands:';
   printf "${subcommand_column}" 'create_host' 'Create a host as an LXC container.';
@@ -144,6 +151,7 @@ general_subcommands=(
   'autocomplete'
   'reissue_ssh_certs'
   'refresh_homer'
+  'setup_transmission'
 )
 
 # Valid subcommands of hellholt:lxc_container.
