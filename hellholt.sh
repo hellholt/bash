@@ -105,9 +105,9 @@ function hellholt:refresh_homer() {
   ANSIBLE_GATHERING='explicit' hellholt:ansible_task 'homer' 'hellholt.setup_host' 'setup_groups/homer.yaml' --become;
 }
 
-# Refresh Homer.
+# Refresh Transmission orchestration.
 function hellholt:setup_transmission() {
-  ANSIBLE_GATHERING='implicit' hellholt:ansible_task 'transmission' 'hellholt.transmission' 'setup.yaml' --become;
+  ANSIBLE_GATHERING='implicit' hellholt:ansible_task 'transmission' 'hellholt.transmission' 'setup.yaml';
 }
 
 # Show usage information.
