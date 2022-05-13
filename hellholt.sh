@@ -132,7 +132,7 @@ function hellholt:setup_transmission() {
 
 # Refresh Unifi Controller.
 function hellholt:setup_unifi() {
-  ANSIBLE_GATHERING='implicit' hellholt:ansible_task 'unifi' 'hellholt.setup_unifi' 'setup.yaml' --become;
+  ANSIBLE_GATHERING='implicit' hellholt:ansible_task 'unifi' 'hellholt.unifi' 'setup.yaml' --become;
 }
 
 # Show usage information.
