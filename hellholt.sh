@@ -56,13 +56,14 @@ function hellholt:reissue_ssh_certs() {
   popd > /dev/null;
 }
 
-# Setup the host.
+# Perform an operation on a Proxmox VE LXC container.
 function hellholt:setup_host() {
   : "${1?"Usage: ${FUNCNAME[0]} <HOSTNAME|GROUP>"}";
   local host_expression="${1}";
-  local args="${@:2}";
+  local operation="${2}";
+  local args="${@:3}";
   pushd "${ansible_path}" > /dev/null;
-  hellholt:ansible_role "${host_expression}" 'hellholt.setup_host' -e 'ansible_user=root' "${args}";
+  hellholt:ansible_role "${host_expression}" 'hellholt.pve_lxc' "${operation}.yaml" -e 'ansible_user=root' "${args}";
   popd > /dev/null;
 }
 
@@ -72,7 +73,7 @@ function hellholt:setup_pve_node() {
   local host_expression="${1}";
   local args="${@:2}";
   pushd "${ansible_path}" > /dev/null;
-  hellholt:ansible_role "${host_expression}" 'hellholt.setup_pve_node' -e 'ansible_user=root' "${args}";
+  hellholt:ansible_role "${host_expression}" 'hellholt.pve_node' 'setup.yaml' -e 'ansible_user=root' "${args}";
   popd > /dev/null;
 }
 
@@ -93,12 +94,21 @@ function hellholt:edit_vault() {
 }
 
 # Perform an operation on an LXC container.
-function hellholt:lxc_container() {
+function hellholt:pve_lxc() {
   : "${2?"Usage: ${FUNCNAME[0]} <COMMAND> <HOSTNAME|GROUP>"}";
-  local subcommand="${1}";
-  local host_expression="${2}";
+  local host_expression="${1}";
+  local subcommand="${2}";
   local args="${@:3}";
-  ANSIBLE_GATHERING='explicit' hellholt:ansible_task "${host_expression}" 'hellholt.proxmox' "${subcommand}.yaml" "${args}";
+  ANSIBLE_GATHERING='explicit' hellholt:ansible_task "${host_expression}" 'hellholt.pve_lxc' "${subcommand}.yaml" "${args}";
+}
+
+# Perform an operation on a Proxmox VE node.
+function hellholt:pve_node() {
+  : "${2?"Usage: ${FUNCNAME[0]} <COMMAND> <HOSTNAME|GROUP>"}";
+  local host_expression="${1}";
+  local subcommand="${2}";
+  local args="${@:3}";
+  ANSIBLE_GATHERING='explicit' hellholt:ansible_task "${host_expression}" 'hellholt.pve_node' "${subcommand}.yaml" "${args}";
 }
 
 # Perform an operation on a Kubernetes cluster.
@@ -154,14 +164,14 @@ function hellholt:usage() {
   printf "${subcommand_column}" 'setup_traefik_site_proxy' 'Setup Traefik Site Proxy.';
   printf "${subcommand_column}" 'setup_unifi' 'Setup Unifi Controller.';
   echo '';
-  echo 'LXC container host subcommands:';
-  printf "${subcommand_column}" 'create_host' 'Create a host as an LXC container.';
-  printf "${subcommand_column}" 'destroy_host' 'Destroy an host.';
-  printf "${subcommand_column}" 'stop_host' 'Stop a host.';
-  printf "${subcommand_column}" 'start_host' 'Start a host.';
-  printf "${subcommand_column}" 'restart_host' 'Restart the host.';
-  printf "${subcommand_column}" 'recreate_host' 'Destroy and recreate the host.';
-  printf "${subcommand_column}" 'setup_host' 'Setup the host.';
+  echo 'Proxmox VE LXC container subcommands:';
+  printf "${subcommand_column}" 'pve_lxc:create' 'Create the container(s).';
+  printf "${subcommand_column}" 'pve_lxc:destroy' 'Destroy the container(s).';
+  printf "${subcommand_column}" 'pve_lxc:stop' 'Stop the container(s).';
+  printf "${subcommand_column}" 'pve_lxc:start' 'Start the container(s).';
+  printf "${subcommand_column}" 'pve_lxc:restart' 'Restart the container(s).';
+  printf "${subcommand_column}" 'pve_lxc:recreate' 'Destroy and recreate the container(s).';
+  printf "${subcommand_column}" 'pve_lxc:setup' 'Setup the container(s).';
   echo '';
   echo 'Kubernetes cluster subcommands:';
   printf "${subcommand_column}" 'create_cluster' 'Create a cluster (but do not deploy tasks).';
@@ -185,18 +195,6 @@ general_subcommands=(
   'setup_pve_node'
   'setup_traefik_site_proxy'
   'setup_unifi'
-)
-
-# Valid subcommands of hellholt:lxc_container.
-lxc_container_subcommands=(
-  'create_host'
-  'destroy_host'
-  'stop_host'
-  'start_host'
-  'restart_host'
-  'recreate_host'
-  'setup_host'
-  'apply_setup_group'
 )
 
 # Valid subcommands of hellholt:k8s_cluster.
@@ -226,14 +224,12 @@ function hellholt:autocomplete() {
 # Primary function.
 function hellholt() {
   : "${1?"Usage: ${FUNCNAME[0]} <SUBCOMMAND> [ARGUMENTS] ..."}";
-  local subcommand=$1;
+  local subcommand="${1}";
   export OBJC_DISABLE_INITIALIZE_FORK_SAFETY='YES';
   export K8S_AUTH_KUBECONFIG='~/.kube/config';
   shift;
-  if type "hellholt:${subcommand}" > /dev/null 2>&1; then
-    "hellholt:${subcommand}" "${@}";
-  elif [[ " ${lxc_container_subcommands[*]} " =~ " ${subcommand} " ]]; then
-    hellholt:lxc_container "${subcommand}" "${@}";
+  if type "hellholt:${subcommand%:*}" > /dev/null 2>&1; then
+    "hellholt:${subcommand%:*}" "${1}" "${subcommand#*:}" "${@:2}";
   elif [[ " ${k8s_cluster_subcommands[*]} " =~ " ${subcommand} " ]]; then
     hellholt:k8s_cluster "${subcommand}" "${@}";
   else
