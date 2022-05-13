@@ -66,6 +66,16 @@ function hellholt:setup_host() {
   popd > /dev/null;
 }
 
+# Setup a Proxmox VE node.
+function hellholt:setup_pve_node() {
+  : "${1?"Usage: ${FUNCNAME[0]} <HOSTNAME|GROUP>"}";
+  local host_expression="${1}";
+  local args="${@:2}";
+  pushd "${ansible_path}" > /dev/null;
+  hellholt:ansible_role "${host_expression}" 'hellholt.setup_pve_node' -e 'ansible_user=root' "${args}";
+  popd > /dev/null;
+}
+
 # Apply a setup group to a host.
 function hellholt:apply_setup_group() {
   : "${2?"Usage: ${FUNCNAME[0]} <HOSTNAME|GROUP> <SETUP_GROUP>"}";
@@ -105,9 +115,24 @@ function hellholt:refresh_homer() {
   ANSIBLE_GATHERING='explicit' hellholt:ansible_task 'homer' 'hellholt.setup_host' 'setup_groups/homer.yaml' --become;
 }
 
+# Refresh Plex orchestration.
+function hellholt:setup_plex() {
+  ANSIBLE_GATHERING='implicit' hellholt:ansible_task 'plex' 'hellholt.plex' 'setup.yaml' --become;
+}
+
+# Refresh Traefik Site Proxy.
+function hellholt:setup_traefik_site_proxy() {
+  ANSIBLE_GATHERING='implicit' hellholt:ansible_task 'traefik_site_proxy' 'hellholt.traefik_site_proxy' 'setup.yaml' --become;
+}
+
 # Refresh Transmission orchestration.
 function hellholt:setup_transmission() {
   ANSIBLE_GATHERING='implicit' hellholt:ansible_task 'transmission' 'hellholt.transmission' 'setup.yaml';
+}
+
+# Refresh Unifi Controller.
+function hellholt:setup_unifi() {
+  ANSIBLE_GATHERING='implicit' hellholt:ansible_task 'unifi' 'hellholt.setup_unifi' 'setup.yaml' --become;
 }
 
 # Show usage information.
@@ -123,7 +148,11 @@ function hellholt:usage() {
   printf "${subcommand_column}" 'autocomplete' 'Output autocomplete information.';
   printf "${subcommand_column}" 'reissue_ssh_certs' 'Reissue SSH certificates.';
   printf "${subcommand_column}" 'refresh_homer' 'Refresh Homer.';
+  printf "${subcommand_column}" 'setup_plex' 'Setup the Plex servers.';
   printf "${subcommand_column}" 'setup_transmission' 'Setup the Transmission cluster.';
+  printf "${subcommand_column}" 'setup_pve_node' 'Setup a Proxmox VE node.';
+  printf "${subcommand_column}" 'setup_traefik_site_proxy' 'Setup Traefik Site Proxy.';
+  printf "${subcommand_column}" 'setup_unifi' 'Setup Unifi Controller.';
   echo '';
   echo 'LXC container host subcommands:';
   printf "${subcommand_column}" 'create_host' 'Create a host as an LXC container.';
@@ -151,7 +180,11 @@ general_subcommands=(
   'autocomplete'
   'reissue_ssh_certs'
   'refresh_homer'
+  'setup_plex'
   'setup_transmission'
+  'setup_pve_node'
+  'setup_traefik_site_proxy'
+  'setup_unifi'
 )
 
 # Valid subcommands of hellholt:lxc_container.
