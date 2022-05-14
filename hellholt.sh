@@ -110,27 +110,14 @@ function hellholt:usage() {
   local subcommand_width='18';
   local subcommand_column="%${subcommand_width}s    %s\n";
   echo 'Usage: hellholt <subcommand> [arguments...]';
-
   echo '';
-
   echo 'General subcommands: ';
-
   printf "${subcommand_column}" 'usage' 'Show usage information.';
   printf "${subcommand_column}" 'ansible_task' 'Run a specified Ansible task.';
   printf "${subcommand_column}" 'edit_vault' 'Edit the vault.';
   printf "${subcommand_column}" 'autocomplete' 'Output autocomplete information.';
-
-  printf "${subcommand_column}" 'reissue_ssh_certs' 'Reissue SSH certificates.';
-
-  printf "${subcommand_column}" 'refresh_homer' 'Refresh Homer.';
-
-  printf "${subcommand_column}" 'aws' 'AWS resources and privileges.';
-  printf "${subcommand_column}" 'dotfiles' 'Setup dotfiles to maintain consistency.';
-
   echo '';
-
   echo 'Proxmox VE LXC container subcommands:';
-
   printf "${subcommand_column}" 'pve_lxc:create' 'Create the container(s).';
   printf "${subcommand_column}" 'pve_lxc:destroy' 'Destroy the container(s).';
   printf "${subcommand_column}" 'pve_lxc:stop' 'Stop the container(s).';
@@ -138,20 +125,22 @@ function hellholt:usage() {
   printf "${subcommand_column}" 'pve_lxc:restart' 'Restart the container(s).';
   printf "${subcommand_column}" 'pve_lxc:recreate' 'Destroy and recreate the container(s).';
   printf "${subcommand_column}" 'pve_lxc:setup' 'Setup the container(s).';
-
   echo '';
-
   echo 'Kubernetes cluster subcommands:';
-
   printf "${subcommand_column}" 'create_cluster' 'Create a cluster (but do not deploy tasks).';
   printf "${subcommand_column}" 'recreate_cluster' 'Destroy and rereate a cluster (but do not deploy tasks).';
   printf "${subcommand_column}" 'destroy_cluster' 'Destroy a cluster.';
   printf "${subcommand_column}" 'reset_cluster' 'Reset a cluster and deploy tasks.';
   printf "${subcommand_column}" 'setup_cluster' 'Setup a cluster and deploy tasks.';
   printf "${subcommand_column}" 'redeploy_cluster' 'Deploy/redeploy tasks on the clustter.';
-
   echo '';
+}
 
+# Retrieve list of roles.
+function hellholt:list_roles() {
+  for i in "${ansible_path}/roles/"hellholt.*; do
+    echo "${i#*\.}";
+  done;
 }
 
 general_subcommands=(
@@ -159,15 +148,10 @@ general_subcommands=(
   'ansible_task'
   'edit_vault'
   'autocomplete'
-  'dotfiles'
-  'reissue_ssh_certs'
-  'refresh_homer'
-  'setup_plex'
-  'setup_transmission'
-  'setup_pve_node'
-  'setup_traefik_site_proxy'
-  'setup_unifi'
 )
+
+# Roles.
+IFS=$'\n' read -d '' -r -a discovered_subcommands < <(hellholt:list_roles)
 
 # Valid subcommands of hellholt:k8s_cluster.
 k8s_cluster_subcommands=(
@@ -185,7 +169,7 @@ function hellholt:autocomplete() {
   IFS=\ ;
   local all_subcommands=(
     "$(echo "${general_subcommands[*]}")"
-    "$(echo "${lxc_container_subcommands[*]}")"
+    "$(echo "${discovered_subcommands[*]}")"
     "$(echo "${k8s_cluster_subcommands[*]}")"
   )
   local subcommands_string="$(echo "${all_subcommands[*]}")";
@@ -202,6 +186,8 @@ function hellholt() {
   shift;
   if type "hellholt:${subcommand%:*}" > /dev/null 2>&1; then
     "hellholt:${subcommand%:*}" "${1}" "${subcommand#*:}" "${@:2}";
+  elif [[ " ${discovered_subcommands[*]} " =~ " ${subcommand%:*} " ]]; then
+    hellholt:ansible_task "${1}" "hellholt.${subcommand%:*}" "${subcommand#*:}.yaml" "${@:2}";
   elif [[ " ${general_subcommands[*]} " =~ " ${subcommand%:*} " ]]; then
     hellholt:ansible_task "${1}" "hellholt.${subcommand%:*}" "${subcommand#*:}.yaml" "${@:2}";
   elif [[ " ${k8s_cluster_subcommands[*]} " =~ " ${subcommand} " ]]; then
