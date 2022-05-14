@@ -2,6 +2,13 @@
 
 ansible_path="${HELLHOLT_ANSIBLE_PATH:-${HOME}/Projects/ansible}";
 
+# Edit the vault.
+function hellholt:edit_vault() {
+  pushd "${ansible_path}" > /dev/null;
+  ansible-vault edit ./inventory/group_vars/all/vault;
+  popd > /dev/null;
+}
+
 # Run a specified Ansible playbook.
 function hellholt:ansible_playbook() {
   : "${2?"Usage: ${FUNCNAME[0]} <PLAYBOOK>"}";
@@ -46,14 +53,22 @@ END
   popd > /dev/null;
 }
 
-# Reissue SSH certificates.
-function hellholt:reissue_ssh_certs() {
-  : "${1?"Usage: ${FUNCNAME[0]} <HOSTNAME|GROUP>"}";
+# Perform an operation on a Proxmox VE node.
+function hellholt:pve_node() {
+  : "${2?"Usage: ${FUNCNAME[0]} <COMMAND> <HOSTNAME|GROUP>"}";
   local host_expression="${1}";
-  local args="${@:2}";
-  pushd "${ansible_path}" > /dev/null;
-  hellholt:ansible_task "${host_expression}" 'hellholt.setup_host' 'setup_groups/ssh_certs.yaml' -e 'ansible_user=root' "${args}";
-  popd > /dev/null;
+  local subcommand="${2}";
+  local args="${@:3}";
+  ANSIBLE_GATHERING='implicit' hellholt:ansible_task "${host_expression}" 'hellholt.pve_node' "${subcommand}.yaml" "${args}";
+}
+
+# Perform an operation on an LXC container.
+function hellholt:pve_lxc() {
+  : "${2?"Usage: ${FUNCNAME[0]} <COMMAND> <HOSTNAME|GROUP>"}";
+  local host_expression="${1}";
+  local subcommand="${2}";
+  local args="${@:3}";
+  ANSIBLE_GATHERING='explicit' hellholt:ansible_task "${host_expression}" 'hellholt.pve_lxc' "${subcommand}.yaml" "${args}";
 }
 
 # Perform an operation on a Proxmox VE LXC container.
@@ -67,16 +82,6 @@ function hellholt:setup_host() {
   popd > /dev/null;
 }
 
-# Setup a Proxmox VE node.
-function hellholt:setup_pve_node() {
-  : "${1?"Usage: ${FUNCNAME[0]} <HOSTNAME|GROUP>"}";
-  local host_expression="${1}";
-  local args="${@:2}";
-  pushd "${ansible_path}" > /dev/null;
-  hellholt:ansible_role "${host_expression}" 'hellholt.pve_node' 'setup.yaml' -e 'ansible_user=root' "${args}";
-  popd > /dev/null;
-}
-
 # Apply a setup group to a host.
 function hellholt:apply_setup_group() {
   : "${2?"Usage: ${FUNCNAME[0]} <HOSTNAME|GROUP> <SETUP_GROUP>"}";
@@ -84,31 +89,6 @@ function hellholt:apply_setup_group() {
   local setup_group="${2}";
   local args="${@:3}";
   ANSIBLE_GATHERING='implicit' hellholt:ansible_task "${host_expression}" 'hellholt.setup_host' "setup_groups/${setup_group}.yaml" "${args}" --become;
-}
-
-# Edit the vault.
-function hellholt:edit_vault() {
-  pushd "${ansible_path}" > /dev/null;
-  ansible-vault edit ./inventory/group_vars/all/vault;
-  popd > /dev/null;
-}
-
-# Perform an operation on an LXC container.
-function hellholt:pve_lxc() {
-  : "${2?"Usage: ${FUNCNAME[0]} <COMMAND> <HOSTNAME|GROUP>"}";
-  local host_expression="${1}";
-  local subcommand="${2}";
-  local args="${@:3}";
-  ANSIBLE_GATHERING='explicit' hellholt:ansible_task "${host_expression}" 'hellholt.pve_lxc' "${subcommand}.yaml" "${args}";
-}
-
-# Perform an operation on a Proxmox VE node.
-function hellholt:pve_node() {
-  : "${2?"Usage: ${FUNCNAME[0]} <COMMAND> <HOSTNAME|GROUP>"}";
-  local host_expression="${1}";
-  local subcommand="${2}";
-  local args="${@:3}";
-  ANSIBLE_GATHERING='explicit' hellholt:ansible_task "${host_expression}" 'hellholt.pve_node' "${subcommand}.yaml" "${args}";
 }
 
 # Perform an operation on a Kubernetes cluster.
@@ -125,46 +105,32 @@ function hellholt:refresh_homer() {
   ANSIBLE_GATHERING='explicit' hellholt:ansible_task 'homer' 'hellholt.setup_host' 'setup_groups/homer.yaml' --become;
 }
 
-# Refresh Plex orchestration.
-function hellholt:setup_plex() {
-  ANSIBLE_GATHERING='implicit' hellholt:ansible_task 'plex' 'hellholt.plex' 'setup.yaml' --become;
-}
-
-# Refresh Traefik Site Proxy.
-function hellholt:setup_traefik_site_proxy() {
-  ANSIBLE_GATHERING='implicit' hellholt:ansible_task 'traefik_site_proxy' 'hellholt.traefik_site_proxy' 'setup.yaml' --become;
-}
-
-# Refresh Transmission orchestration.
-function hellholt:setup_transmission() {
-  ANSIBLE_GATHERING='implicit' hellholt:ansible_task 'transmission' 'hellholt.transmission' 'setup.yaml';
-}
-
-# Refresh Unifi Controller.
-function hellholt:setup_unifi() {
-  ANSIBLE_GATHERING='implicit' hellholt:ansible_task 'unifi' 'hellholt.unifi' 'setup.yaml' --become;
-}
-
 # Show usage information.
 function hellholt:usage() {
   local subcommand_width='18';
   local subcommand_column="%${subcommand_width}s    %s\n";
   echo 'Usage: hellholt <subcommand> [arguments...]';
+
   echo '';
-  echo 'Subcommands: ';
+
+  echo 'General subcommands: ';
+
   printf "${subcommand_column}" 'usage' 'Show usage information.';
   printf "${subcommand_column}" 'ansible_task' 'Run a specified Ansible task.';
   printf "${subcommand_column}" 'edit_vault' 'Edit the vault.';
   printf "${subcommand_column}" 'autocomplete' 'Output autocomplete information.';
+
   printf "${subcommand_column}" 'reissue_ssh_certs' 'Reissue SSH certificates.';
+
   printf "${subcommand_column}" 'refresh_homer' 'Refresh Homer.';
-  printf "${subcommand_column}" 'setup_plex' 'Setup the Plex servers.';
-  printf "${subcommand_column}" 'setup_transmission' 'Setup the Transmission cluster.';
-  printf "${subcommand_column}" 'setup_pve_node' 'Setup a Proxmox VE node.';
-  printf "${subcommand_column}" 'setup_traefik_site_proxy' 'Setup Traefik Site Proxy.';
-  printf "${subcommand_column}" 'setup_unifi' 'Setup Unifi Controller.';
+
+  printf "${subcommand_column}" 'aws' 'AWS resources and privileges.';
+  printf "${subcommand_column}" 'dotfiles' 'Setup dotfiles to maintain consistency.';
+
   echo '';
+
   echo 'Proxmox VE LXC container subcommands:';
+
   printf "${subcommand_column}" 'pve_lxc:create' 'Create the container(s).';
   printf "${subcommand_column}" 'pve_lxc:destroy' 'Destroy the container(s).';
   printf "${subcommand_column}" 'pve_lxc:stop' 'Stop the container(s).';
@@ -172,15 +138,20 @@ function hellholt:usage() {
   printf "${subcommand_column}" 'pve_lxc:restart' 'Restart the container(s).';
   printf "${subcommand_column}" 'pve_lxc:recreate' 'Destroy and recreate the container(s).';
   printf "${subcommand_column}" 'pve_lxc:setup' 'Setup the container(s).';
+
   echo '';
+
   echo 'Kubernetes cluster subcommands:';
+
   printf "${subcommand_column}" 'create_cluster' 'Create a cluster (but do not deploy tasks).';
   printf "${subcommand_column}" 'recreate_cluster' 'Destroy and rereate a cluster (but do not deploy tasks).';
   printf "${subcommand_column}" 'destroy_cluster' 'Destroy a cluster.';
   printf "${subcommand_column}" 'reset_cluster' 'Reset a cluster and deploy tasks.';
   printf "${subcommand_column}" 'setup_cluster' 'Setup a cluster and deploy tasks.';
   printf "${subcommand_column}" 'redeploy_cluster' 'Deploy/redeploy tasks on the clustter.';
+
   echo '';
+
 }
 
 general_subcommands=(
@@ -188,6 +159,7 @@ general_subcommands=(
   'ansible_task'
   'edit_vault'
   'autocomplete'
+  'dotfiles'
   'reissue_ssh_certs'
   'refresh_homer'
   'setup_plex'
@@ -230,6 +202,8 @@ function hellholt() {
   shift;
   if type "hellholt:${subcommand%:*}" > /dev/null 2>&1; then
     "hellholt:${subcommand%:*}" "${1}" "${subcommand#*:}" "${@:2}";
+  elif [[ " ${general_subcommands[*]} " =~ " ${subcommand%:*} " ]]; then
+    hellholt:ansible_task "${1}" "hellholt.${subcommand%:*}" "${subcommand#*:}.yaml" "${@:2}";
   elif [[ " ${k8s_cluster_subcommands[*]} " =~ " ${subcommand} " ]]; then
     hellholt:k8s_cluster "${subcommand}" "${@}";
   else
