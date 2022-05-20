@@ -43,6 +43,7 @@ function hellholt:ansible_task() {
   ansible-playbook ${@:4} /dev/stdin <<END
 ---
 - hosts: $host_expression
+  remote_user: 'root'
   tasks:
 
   - name: 'Execute $role_name:$task_file'
